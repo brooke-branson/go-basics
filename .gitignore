@@ -1,0 +1,12 @@
+# Binaries
+go-basics
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binary
+*.test
+
+# Output
+*.out
