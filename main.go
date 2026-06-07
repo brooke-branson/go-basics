@@ -127,6 +127,10 @@ func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) 
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if err := app.store.StoreTransformedPlayer(r.Context(), playerId, string(output)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(output)
 }

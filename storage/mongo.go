@@ -93,6 +93,24 @@ func (s *Store) StorePlayer(ctx context.Context, player models.Player) error {
 	return nil
 }
 
+func (s *Store) StoreTransformedPlayer(ctx context.Context, playerId string, xmlString string) error {
+	collection := s.client.Database("go-basics").Collection("transformed-player-data")
+	filter := bson.M{"player_id": playerId}
+
+	update := bson.M{
+		"$set": bson.M{
+			"format":    "xml",
+			"xml_output": xmlString, // TODO: Add XML output as a BSON binary
+			"created_at": time.Now(),
+		},
+	}
+	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	if err != nil {
+		return err
+	}
+	fmt.Println("Transformed player stored or updated successfully")
+	return nil
+}
 func (s *Store) DeletePlayer(ctx context.Context, playerId string) error {
 	collection := s.client.Database("go-basics").Collection("player-data")
 	_, err := collection.DeleteOne(ctx, bson.M{"player_id": playerId})
