@@ -10,3 +10,6 @@ go-basics
 
 # Output
 *.out
+
+# Environment variables
+.env

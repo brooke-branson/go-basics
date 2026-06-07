@@ -1,18 +1,6 @@
 package transforms
 
-type RawPlayer struct {
-	PlayerId   string `json:"player_id"`
-	PlayerName string `json:"player_name"`
-	PlayerTeam string `json:"player_team"`
-	AtBats     int    `json:"at_bats"`
-	Walks      int    `json:"walks"`
-	Strikeouts int    `json:"strikeouts"`
-	HomeRuns   int    `json:"home_runs"`
-	Single     int    `json:"single"`
-	Double     int    `json:"double"`
-	Triple     int    `json:"triple"`
-	HomeRun    int    `json:"home_run"`
-}
+import "go-basics/models"
 
 type TransformedPlayer struct {
 	XmlName           string  `xml:"Player" json:"-"`
@@ -27,20 +15,20 @@ type TransformedPlayer struct {
 	OnBasePercentage    float64 `xml:"on_base_percentage" json:"on_base_percentage"`
 }
 
-func TransformPlayer(raw RawPlayer) TransformedPlayer {
-	hits := raw.Single + raw.Double + raw.Triple + raw.HomeRun
-	battingAverage := float64(hits) / float64(raw.AtBats)
-	homeRunPercentage := float64(raw.HomeRuns) / float64(raw.AtBats)
-	totalBases := raw.Single + 2 * raw.Double + 3 * raw.Triple + 4 * raw.HomeRun
-	sluggingPercentage := float64(totalBases) / float64(raw.AtBats)
-	onBasePercentage := float64(hits) / float64(raw.AtBats + raw.Walks) // TODO: Add correct formula
+func TransformPlayer(player models.Player) TransformedPlayer {
+	hits := player.Single + player.Double + player.Triple + player.HomeRun
+	battingAverage := float64(hits) / float64(player.AtBats)
+	homeRunPercentage := float64(player.HomeRuns) / float64(player.AtBats)
+	totalBases := player.Single + 2 * player.Double + 3 * player.Triple + 4 * player.HomeRun
+	sluggingPercentage := float64(totalBases) / float64(player.AtBats)
+	onBasePercentage := float64(hits) / float64(player.AtBats + player.Walks) // TODO: Add correct formula
 	onBasePlusSlugging := onBasePercentage + sluggingPercentage
 
 	return TransformedPlayer{
 		XmlName:           "Player",
-		PlayerId:          raw.PlayerId,
-		PlayerName:        raw.PlayerName,
-		PlayerTeam:        raw.PlayerTeam,
+		PlayerId:          player.PlayerId,
+		PlayerName:        player.PlayerName,
+		PlayerTeam:        player.PlayerTeam,
 		BattingAverage:    battingAverage,
 		HomeRunPercentage: homeRunPercentage,
 		TotalBases:        totalBases,

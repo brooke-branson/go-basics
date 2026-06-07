@@ -4,11 +4,19 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"log"
+	"context"
 	"net/http"
-
 	"go-basics/models"
+	"go-basics/storage"
 	"go-basics/transforms"
+	"go-basics/config"
+	"time"
 )
+
+type app struct {
+	store *storage.Store
+}
 
 func getHealthz(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
@@ -17,26 +25,64 @@ func getHealthz(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(response)
 }
 
-func getPlayers(w http.ResponseWriter, r *http.Request) {
-	response := models.Player{
-		PlayerId: "1",
-		PlayerName: "Fernando Tatis Jr.",
-		PlayerTeam: "Padres",
+func (app *app) getPlayers(w http.ResponseWriter, r *http.Request) {
+	players, err := app.store.GetPlayers(r.Context())
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
-	json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(players)
 }
 
-func getTransformedPlayers(w http.ResponseWriter, r *http.Request) {
+func (app *app) getPlayer(w http.ResponseWriter, r *http.Request){
+	playerId := r.URL.Query().Get("player_id")
+	player, err := app.store.GetPlayer(r.Context(), playerId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(player)
+}
 
-	var rawPlayer transforms.RawPlayer
+func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
+	var player models.Player
+
+	if r.Method != "POST" {
+		http.Error(w, "Only use POST method", http.StatusMethodNotAllowed)
+		return
+	}
+	if err := json.NewDecoder(r.Body).Decode(&player); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := app.store.StorePlayer(r.Context(), player); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(player)
+}
+
+func (app *app) deletePlayer(w http.ResponseWriter, r *http.Request) {
+	playerId := r.URL.Query().Get("player_id")
+	if err := app.store.DeletePlayer(r.Context(), playerId); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	json.NewEncoder(w).Encode(map[string]string{"message": "Player deleted successfully"})
+}
+
+func (app *app) getPlayerTransformed(w http.ResponseWriter, r *http.Request) {
+	// getPlayersTransformed takes a pre-formatted ojbject in JSON
+	// and converts it to XML
+	var player models.Player
 
 	if r.Method != "POST" {
 		http.Error(w, "Only use POST method", http.StatusMethodNotAllowed)
 		return
 	}
 
-	json.NewDecoder(r.Body).Decode(&rawPlayer)
-	transformedPlayer := transforms.TransformPlayer(rawPlayer)
+	json.NewDecoder(r.Body).Decode(&player)
+	transformedPlayer := transforms.TransformPlayer(player)
 
 	switch r.URL.Path {
 	case "/transformed-players/json":
@@ -58,14 +104,56 @@ func getTransformedPlayers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 }
+
+func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) {
+	// getTransformedPlayerXML takes a player ID and returns the transformed player in XML
+
+	playerId := r.URL.Query().Get("player_id")
+	player, err := app.store.GetPlayer(r.Context(), playerId)
 	
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	transformedPlayer := transforms.TransformPlayer(player)
+
+	output, err := xml.MarshalIndent(transformedPlayer, "", "  ")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml")
+	w.Write(output)
+}
 func main() {
-	fmt.Println("Listening on port 8080")
+	cfg, err := config.LoadConfig()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	store, err := storage.Connect(ctx, cfg.MongoURI)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer store.Close(context.Background())
+
+	fmt.Println("Connected to MongoDB")
+
+	server := &app{store: store}
+
+	fmt.Println("Listening on port ", cfg.Port)
 
 	http.HandleFunc("/healthz", getHealthz)
-	http.HandleFunc("/players", getPlayers)
-	http.HandleFunc("/transformed-players/json", getTransformedPlayers)
-	http.HandleFunc("/transformed-players/xml", getTransformedPlayers)
+	http.HandleFunc("/players", server.getPlayers)
+	http.HandleFunc("/players/lookup", server.getPlayer)
+	http.HandleFunc("/players/add", server.addPlayer)
+	http.HandleFunc("/players/delete", server.deletePlayer)
+	http.HandleFunc("/transformed-players/json", server.getPlayerTransformed)
+	http.HandleFunc("/transformed-player/xml", server.getTransformedPlayerXML)
+	http.HandleFunc("/transformed-players/xml", server.getTransformedPlayers)
 
 	http.ListenAndServe(":8080", nil)
 }
