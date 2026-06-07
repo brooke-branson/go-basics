@@ -16,10 +16,10 @@ type TransformedPlayer struct {
 }
 
 func TransformPlayer(player models.Player) TransformedPlayer {
-	hits := player.Single + player.Double + player.Triple + player.HomeRun
+	hits := player.Single + player.Double + player.Triple + player.HomeRuns
 	battingAverage := float64(hits) / float64(player.AtBats)
 	homeRunPercentage := float64(player.HomeRuns) / float64(player.AtBats)
-	totalBases := player.Single + 2 * player.Double + 3 * player.Triple + 4 * player.HomeRun
+	totalBases := player.Single + 2 * player.Double + 3 * player.Triple + 4 * player.HomeRuns
 	sluggingPercentage := float64(totalBases) / float64(player.AtBats)
 	onBasePercentage := float64(hits) / float64(player.AtBats + player.Walks) // TODO: Add correct formula
 	onBasePlusSlugging := onBasePercentage + sluggingPercentage

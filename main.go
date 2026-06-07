@@ -153,7 +153,7 @@ func main() {
 	http.HandleFunc("/players/delete", server.deletePlayer)
 	http.HandleFunc("/transformed-players/json", server.getPlayerTransformed)
 	http.HandleFunc("/transformed-player/xml", server.getTransformedPlayerXML)
-	http.HandleFunc("/transformed-players/xml", server.getTransformedPlayers)
+	http.HandleFunc("/transformed-players/xml", server.getPlayerTransformed)
 
 	http.ListenAndServe(":8080", nil)
 }

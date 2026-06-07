@@ -79,7 +79,6 @@ func (s *Store) StorePlayer(ctx context.Context, player models.Player) error {
 			"single":      player.Single,
 			"double":      player.Double,
 			"triple":      player.Triple,
-			"home_run":    player.HomeRun,
 		},
 		"$setOnInsert": bson.M{
 			"created_at": time.Now(),

@@ -11,5 +11,4 @@ type Player struct {
 	Single     int    `json:"single" bson:"single"`
 	Double     int    `json:"double" bson:"double"`
 	Triple     int    `json:"triple" bson:"triple"`
-	HomeRun    int    `json:"home_run" bson:"home_run"`
 }
