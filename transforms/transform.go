@@ -1,9 +1,12 @@
 package transforms
 
-import "go-basics/models"
+import (
+	"go-basics/models"
+"encoding/xml"
+)
 
 type TransformedPlayer struct {
-	XmlName           string  `xml:"Player" json:"-"`
+	XMLName           xml.Name  `xml:"Player" json:"-"`
 	PlayerId          string  `xml:"player_id" json:"player_id"`
 	PlayerName        string  `xml:"player_name" json:"player_name"`
 	PlayerTeam        string  `xml:"player_team" json:"player_team"`
@@ -25,7 +28,7 @@ func TransformPlayer(player models.Player) TransformedPlayer {
 	onBasePlusSlugging := onBasePercentage + sluggingPercentage
 
 	return TransformedPlayer{
-		XmlName:           "Player",
+		XMLName:           xml.Name{Space: "", Local: "Player"},
 		PlayerId:          player.PlayerId,
 		PlayerName:        player.PlayerName,
 		PlayerTeam:        player.PlayerTeam,
