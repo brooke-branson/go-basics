@@ -11,6 +11,7 @@ import (
 	"go-basics/storage"
 	"go-basics/transforms"
 	"go-basics/config"
+	"go-basics/validation"
 	"time"
 )
 
@@ -52,6 +53,10 @@ func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := json.NewDecoder(r.Body).Decode(&player); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if err := validation.ValidatePlayer(player); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -125,6 +130,7 @@ func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) 
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(output)
 }
+
 func main() {
 	cfg, err := config.LoadConfig()
 	if err != nil {
