@@ -100,7 +100,10 @@ func (s *Store) StoreTransformedPlayer(ctx context.Context, playerId string, xml
 	update := bson.M{
 		"$set": bson.M{
 			"format":    "xml",
-			"xml_output": xmlString, // TODO: Add XML output as a BSON binary
+			"xml_output": xmlString,
+			"updated_at": time.Now(),
+		},
+		"$setOnInsert": bson.M{
 			"created_at": time.Now(),
 		},
 	}
