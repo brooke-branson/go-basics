@@ -1,5 +1,6 @@
 # Binaries
 go-basics
+mlb-transform-api
 *.exe
 *.dll
 *.so
@@ -13,3 +14,12 @@ go-basics
 
 # Environment variables
 .env
+
+# macOS
+.DS_Store
+__MACOSX/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp

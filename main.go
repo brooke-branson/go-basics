@@ -1,17 +1,17 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"log"
-	"context"
-	"net/http"
+	"go-basics/config"
 	"go-basics/models"
 	"go-basics/storage"
 	"go-basics/transforms"
-	"go-basics/config"
 	"go-basics/validation"
+	"log"
+	"net/http"
 	"time"
 )
 
@@ -35,7 +35,7 @@ func (app *app) getPlayers(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(players)
 }
 
-func (app *app) getPlayer(w http.ResponseWriter, r *http.Request){
+func (app *app) getPlayer(w http.ResponseWriter, r *http.Request) {
 	playerId := r.URL.Query().Get("player_id")
 	player, err := app.store.GetPlayer(r.Context(), playerId)
 	if err != nil {
@@ -43,6 +43,17 @@ func (app *app) getPlayer(w http.ResponseWriter, r *http.Request){
 		return
 	}
 	json.NewEncoder(w).Encode(player)
+}
+
+func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) {
+	playerId := r.URL.Query().Get("player_id")
+	xmlOutput, err := app.store.GetTransformedPlayer(r.Context(), playerId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/xml")
+	w.Write([]byte(xmlOutput))
 }
 
 func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +75,9 @@ func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	json.NewEncoder(w).Encode(player)
+	if err := json.NewEncoder(w).Encode(player); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+	}
 }
 
 func (app *app) deletePlayer(w http.ResponseWriter, r *http.Request) {
@@ -76,70 +89,37 @@ func (app *app) deletePlayer(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"message": "Player deleted successfully"})
 }
 
-func (app *app) getPlayerTransformed(w http.ResponseWriter, r *http.Request) {
-	// getPlayersTransformed takes a pre-formatted ojbject in JSON
-	// and converts it to XML
-	var player models.Player
-
-	if r.Method != "POST" {
-		http.Error(w, "Only use POST method", http.StatusMethodNotAllowed)
-		return
-	}
-
-	json.NewDecoder(r.Body).Decode(&player)
-	transformedPlayer := transforms.TransformPlayer(player)
-
-	switch r.URL.Path {
-	case "/transformed-players/json":
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(transformedPlayer)
-
-	case "/transformed-players/xml":
-		w.Header().Set("Content-Type", "application/xml")
-		output, err := xml.MarshalIndent(transformedPlayer, "", "  ")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Header().Set("Content-Type", "application/xml")
-		w.Write(output)
-		
-	default:
-		http.Error(w, "Invalid path", http.StatusBadRequest)
-		return
-	}
-}
-
-func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) {
+func (app *app) transformPlayer(w http.ResponseWriter, r *http.Request) {
 	// getTransformedPlayerXML takes a player ID and returns the transformed player in XML
 
 	playerId := r.URL.Query().Get("player_id")
 	player, err := app.store.GetPlayer(r.Context(), playerId)
-	
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	transformedPlayer := transforms.TransformPlayer(player)
 
 	output, err := xml.MarshalIndent(transformedPlayer, "", "  ")
+
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	if err := app.store.StoreTransformedPlayer(r.Context(), playerId, string(output)); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(output)
 }
 
 func main() {
-	cfg, err := config.LoadConfig()
-	if err != nil {
-		log.Fatal(err)
-	}
+	cfg := config.LoadConfig()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
@@ -157,13 +137,12 @@ func main() {
 	fmt.Println("Listening on port ", cfg.Port)
 
 	http.HandleFunc("/healthz", getHealthz)
-	http.HandleFunc("/players", server.getPlayers)
-	http.HandleFunc("/players/lookup", server.getPlayer)
+	http.HandleFunc("/get-all-players", server.getPlayers)
+	http.HandleFunc("/get-player", server.getPlayer)
 	http.HandleFunc("/players/add", server.addPlayer)
 	http.HandleFunc("/players/delete", server.deletePlayer)
-	http.HandleFunc("/transformed-players/json", server.getPlayerTransformed)
-	http.HandleFunc("/transformed-player/xml", server.getTransformedPlayerXML)
-	http.HandleFunc("/transformed-players/xml", server.getPlayerTransformed)
+	http.HandleFunc("/transform-player", server.transformPlayer)
+	http.HandleFunc("/get-transformed-player", server.getTransformedPlayerXML)
 
-	http.ListenAndServe(":8080", nil)
+	http.ListenAndServe(":"+cfg.Port, nil)
 }

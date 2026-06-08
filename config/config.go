@@ -1,7 +1,7 @@
 package config
 
 import (
-	"fmt"
+	"log"
 	"os"
 
 	"github.com/joho/godotenv"
@@ -12,20 +12,18 @@ type Config struct {
 	Port     string
 }
 
-func LoadConfig() (Config, error) {
-	err := godotenv.Load()
-	if err != nil {
-		return Config{}, fmt.Errorf("error loading .env file: %w", err)
-	}
+func LoadConfig() Config {
+	_ = godotenv.Load()
+
 	cfg := Config{
 		MongoURI: os.Getenv("MONGO_URI"),
 		Port:     os.Getenv("PORT"),
 	}
 	if cfg.MongoURI == "" {
-		return cfg, fmt.Errorf("MONGO_URI is not set")
+		log.Fatal("MONGO_URI is not set")
 	}
 	if cfg.Port == "" {
-		return cfg, fmt.Errorf("PORT is not set")
+		log.Fatal("PORT is not set")
 	}
-	return cfg, nil
+	return cfg
 }

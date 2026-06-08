@@ -65,6 +65,18 @@ func (s *Store) GetPlayer(ctx context.Context, playerId string) (models.Player, 
 	return player, nil
 }
 
+func (s *Store) GetTransformedPlayer(ctx context.Context, playerId string) (string, error) {
+	collection := s.client.Database("go-basics").Collection("transformed-player-data")
+	var doc struct {
+		XMLOutput string `bson:"xml_output"`
+	}
+	err := collection.FindOne(ctx, bson.M{"player_id": playerId}).Decode(&doc)
+	if err != nil {
+		return "", err
+	}
+	return doc.XMLOutput, nil
+}
+
 func (s *Store) StorePlayer(ctx context.Context, player models.Player) error {
 	collection := s.client.Database("go-basics").Collection("player-data")
 	filter := bson.M{"player_id": player.PlayerId}
@@ -99,9 +111,12 @@ func (s *Store) StoreTransformedPlayer(ctx context.Context, playerId string, xml
 
 	update := bson.M{
 		"$set": bson.M{
-			"format":    "xml",
-			"xml_output": xmlString,
-			"updated_at": time.Now(),
+			"format":              "xml",
+			"source_format":       "json",
+			"output_format":       "xml",
+			"transformation_type": "player-stats",
+			"xml_output":          xmlString,
+			"updated_at":          time.Now(),
 		},
 		"$setOnInsert": bson.M{
 			"created_at": time.Now(),
@@ -121,5 +136,5 @@ func (s *Store) DeletePlayer(ctx context.Context, playerId string) error {
 		return fmt.Errorf("delete player: %w", err)
 	}
 	fmt.Println("Player deleted successfully")
-	return nil	
+	return nil
 }

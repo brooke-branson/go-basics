@@ -2,7 +2,7 @@ package transforms
 
 import (
 	"go-basics/models"
-"encoding/xml"
+	"encoding/xml"
 )
 
 type TransformedPlayer struct {
