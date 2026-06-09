@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+
+metadata:
+  name: mlb-api
+  namespace: mlb-transform
+
+spec:
+  replicas: 3
+
+  selector:
+    matchLabels:
+      app: mlb-api
+
+  template:
+    metadata:
+      labels:
+        app: mlb-api
+
+    spec:
+      containers:
+        - name: mlb-api
+          image: mlb-transform-api:latest
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: mlb-config
+                  key: PORT
+
+            - name: MONGO_URI
+              value: mongodb://admin:password@mongo:27017
+
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5

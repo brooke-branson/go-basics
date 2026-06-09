@@ -23,12 +23,15 @@ func getHealthz(w http.ResponseWriter, r *http.Request) {
 	response := map[string]string{
 		"status": "ok",
 	}
+
+	log.Println("Health check successful")
 	json.NewEncoder(w).Encode(response)
 }
 
 func (app *app) getPlayers(w http.ResponseWriter, r *http.Request) {
 	players, err := app.store.GetPlayers(r.Context())
 	if err != nil {
+		log.Println("Error getting players:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -39,6 +42,7 @@ func (app *app) getPlayer(w http.ResponseWriter, r *http.Request) {
 	playerId := r.URL.Query().Get("player_id")
 	player, err := app.store.GetPlayer(r.Context(), playerId)
 	if err != nil {
+		log.Println("Error getting player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -49,6 +53,7 @@ func (app *app) getTransformedPlayerXML(w http.ResponseWriter, r *http.Request) 
 	playerId := r.URL.Query().Get("player_id")
 	xmlOutput, err := app.store.GetTransformedPlayer(r.Context(), playerId)
 	if err != nil {
+		log.Println("Error getting transformed player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -60,22 +65,27 @@ func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
 	var player models.Player
 
 	if r.Method != "POST" {
+		log.Println("Only use POST method")
 		http.Error(w, "Only use POST method", http.StatusMethodNotAllowed)
 		return
 	}
 	if err := json.NewDecoder(r.Body).Decode(&player); err != nil {
+		log.Println("Error decoding player:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := validation.ValidatePlayer(player); err != nil {
+		log.Println("Error validating player:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	if err := app.store.StorePlayer(r.Context(), player); err != nil {
+		log.Println("Error storing player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	if err := json.NewEncoder(w).Encode(player); err != nil {
+		log.Println("Error encoding player:", err)
 		http.Error(w, err.Error(), http.StatusBadRequest)
 	}
 }
@@ -83,9 +93,11 @@ func (app *app) addPlayer(w http.ResponseWriter, r *http.Request) {
 func (app *app) deletePlayer(w http.ResponseWriter, r *http.Request) {
 	playerId := r.URL.Query().Get("player_id")
 	if err := app.store.DeletePlayer(r.Context(), playerId); err != nil {
+		log.Println("Error deleting player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	log.Println("Player deleted successfully")
 	json.NewEncoder(w).Encode(map[string]string{"message": "Player deleted successfully"})
 }
 
@@ -94,8 +106,8 @@ func (app *app) transformPlayer(w http.ResponseWriter, r *http.Request) {
 
 	playerId := r.URL.Query().Get("player_id")
 	player, err := app.store.GetPlayer(r.Context(), playerId)
-
 	if err != nil {
+		log.Println("Error getting player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -105,15 +117,18 @@ func (app *app) transformPlayer(w http.ResponseWriter, r *http.Request) {
 	output, err := xml.MarshalIndent(transformedPlayer, "", "  ")
 
 	if err != nil {
+		log.Println("Error marshalling transformed player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	if err := app.store.StoreTransformedPlayer(r.Context(), playerId, string(output)); err != nil {
+		log.Println("Error storing transformed player:", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
+	log.Println("Transformed player stored successfully")
 	w.Header().Set("Content-Type", "application/xml")
 	w.Write(output)
 }
