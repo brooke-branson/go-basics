@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: mlb-stats-sync
+  namespace: mlb-transform
+spec:
+  schedule: "0 0 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: mlb-stats-sync
+              image: mlb-stats-sync:latest
+              command: ["./mlb-transform-api", "sync"]
+              env:
+                - name: MONGO_URI
+                  value: mongodb://admin:password@mongo:27017
+                - name: PORT
+                  value: "8080"
+          restartPolicy: OnFailure
